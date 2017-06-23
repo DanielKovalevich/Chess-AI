@@ -87,40 +87,21 @@ void ChessBoard::drawBoard() const {
 			std::cout << std::setw(3) << "P" << std::setw(3);
 		else {
 			// i need to adjust the rows for the black and white pattern
-			if (alternateRow) {
-				if ((i + 1) % 2 == 0) {
-					// first of each row
-					if ((i + 1) % 8 == 0) {
-						std::cout << std::setw(4) << "   ";
-					}
-					else {
-						std::cout << std::setw(3) << "   ";
-					}
-				}
+			if ((i + 1 + alternateRow) % 2 == 0) {
 				// first of each row
-				else if (i % 8 == 0) {
-					std::cout << std::setw(4) << ":::";
+				if ((i + 1 - alternateRow) % 8 == 0) {
+					std::cout << std::setw(3) << "   " << std::setw(2);
 				}
 				else {
-					std::cout << std::setw(3) << ":::" << std::setw(2);
+					std::cout << std::setw(3) << "   ";
 				}
 			}
+			// first of each row
+			else if ((i + alternateRow) % 8 == 0) {
+				std::cout << std::setw(4) << ":::";
+			}
 			else {
-				if ((i + 2) % 2 == 0) {
-					// first of each row
-					if (i % 8 == 0) {
-						std::cout << std::setw(4) << "   ";
-					}
-					else {
-						std::cout << std::setw(3) << "   ";
-					}
-				}
-				else if ((i + 1) % 8 == 0) {
-					std::cout << std::setw(3) << ":::" << std::setw(2);
-				}
-				else {
-					std::cout << std::setw(3) << ":::" << std::setw(2);
-				}
+				std::cout << std::setw(3) << ":::" << std::setw(2);
 			}
 		}
 
