@@ -50,37 +50,109 @@ public:
 private:
 	// store all bitboards in an array - 2 for each colors and the other for pieces
 	std::bitset<64> pieceBitBoard[8];
+
+	//-------------helper functions for board outlay---------------//
+	void inline static createPreBoard();
+	void inline static createPostBoard();
 };
 
+// this function prints out the ASCII chessboard to the console
+// i want to see if I can do it all in the console before moving to 3D graphics
 void ChessBoard::drawBoard() const {
 	std::bitset<64> occupied = getAllPieces();
 	char bullet = static_cast<char>(250);
-	std::cout << "  +--------------------------+ " << std::endl;
-	std::cout << "  |" << std::setw(27) << "|" << std::endl;
+
+	createPreBoard();
+
+	int sideNumbers = 8;
+	int alternateRow = 0;
 	for (int i = 0; i < 64; i++) {
 		if (i % 8 == 0) {
+			std::cout << std::setw(2) << sideNumbers;
 			std::cout << std::setw(3) << "|";
 		}
 
+		// place all the pieces according to the bitboards
 		if (occupied[i] & pieceBitBoard[king][i])
-			std::cout << std::setw(3) <<  "K";
+			std::cout << std::setw(3) << "K" << std::setw(3);
 		else if (occupied[i] & pieceBitBoard[queen][i])
-			std::cout << std::setw(3) << "Q";
+			std::cout << std::setw(3) << "Q" << std::setw(3);
 		else if (occupied[i] & pieceBitBoard[rook][i])
-			std::cout << std::setw(3) << "R";
+			std::cout << std::setw(3) << "R" << std::setw(3);
 		else if (occupied[i] & pieceBitBoard[bishop][i])
-			std::cout << std::setw(3) << "B";
+			std::cout << std::setw(3) << "B" << std::setw(3);
 		else if (occupied[i] & pieceBitBoard[knight][i])
-			std::cout << std::setw(3) << "N";
+			std::cout << std::setw(3) << "N" << std::setw(3);
 		else if (occupied[i] & pieceBitBoard[pawn][i])
-			std::cout << std::setw(3) << "P";
-		else
-			std::cout << std::setw(3) << bullet;
+			std::cout << std::setw(3) << "P" << std::setw(3);
+		else {
+			// i need to adjust the rows for the black and white pattern
+			if (alternateRow) {
+				if ((i + 1) % 2 == 0) {
+					// first of each row
+					if ((i + 1) % 8 == 0) {
+						std::cout << std::setw(4) << "   ";
+					}
+					else {
+						std::cout << std::setw(3) << "   ";
+					}
+				}
+				// first of each row
+				else if (i % 8 == 0) {
+					std::cout << std::setw(4) << ":::";
+				}
+				else {
+					std::cout << std::setw(3) << ":::" << std::setw(2);
+				}
+			}
+			else {
+				if ((i + 2) % 2 == 0) {
+					// first of each row
+					if (i % 8 == 0) {
+						std::cout << std::setw(4) << "   ";
+					}
+					else {
+						std::cout << std::setw(3) << "   ";
+					}
+				}
+				else if ((i + 1) % 8 == 0) {
+					std::cout << std::setw(3) << ":::" << std::setw(2);
+				}
+				else {
+					std::cout << std::setw(3) << ":::" << std::setw(2);
+				}
+			}
+		}
 
-		if (i != 0 && (i + 1) % 8 == 0)
-			std::cout << std::setw(3) << "|" << std::endl;
+		if (i != 0 && (i + 1) % 8 == 0) {
+			std::cout << "|" << std::setw(3) << sideNumbers << std::endl;
+			sideNumbers--;
+			alternateRow = ~alternateRow;
+		}
+
+		
 	}
 
-	std::cout << "  |" << std::setw(27) << "|" << std::endl;
-	std::cout << "  +--------------------------+ " << std::endl;
+	createPostBoard();
+}
+
+void ChessBoard::createPreBoard(){
+	std::cout << std::setw(21) << "Chess\n" << std::endl;
+	std::cout << std::setw(8) << 'A';
+	for (int i = 1; i <= 7; i++) {
+		std::cout << std::setw(3) << static_cast<char>(i + 'A');
+	}
+	std::cout << std::endl;
+	std::cout << std::setw(33) << "+--------------------------+ " << std::endl;
+	std::cout << std::setw(5) << "|" << std::setw(27) << "|" << std::endl;
+}
+
+void ChessBoard::createPostBoard(){
+	std::cout << std::setw(5) << "|" << std::setw(27) << "|" << std::endl;
+	std::cout << std::setw(33) << "+--------------------------+ " << std::endl;
+	std::cout << std::setw(8) << 'A';
+	for (int i = 1; i <= 7; i++) {
+		std::cout << std::setw(3) << static_cast<char>(i + 'A');
+	}
+	std::cout << std::endl << std::endl;
 }
