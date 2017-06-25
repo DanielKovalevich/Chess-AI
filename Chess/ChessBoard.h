@@ -7,8 +7,17 @@
 class ChessBoard {
 public:
 	// Use this to eliminate moves on the A and H rank, ie, +-1, +-7, +-9
-	const std::bitset<64> notAFile = 0xfefefefefefefefe; // ~0x0101010101010101
-	const std::bitset<64> notHFile = 0x7f7f7f7f7f7f7f7f; // ~0x8080808080808080
+	const std::bitset<64> 
+		notAFile   = 0xfefefefefefefefe, // ~0x010101010101010
+		notHFile   = 0x7f7f7f7f7f7f7f7f, // ~0x8080808080808080
+		origWhite  = 0x000000000000ffff,
+		origBlack  = 0xffff000000000000,
+		origKing   = 0x1000000000000010,
+		origQueen  = 0x0800000000000008,
+		origRook   = 0x8100000000000081,
+		origBishop = 0x2400000000000024,
+		origKnight = 0x4200000000000042,
+		origPawn   = 0x00ff00000000ff00;
 
 	enum pieces {
 		white,
@@ -24,14 +33,14 @@ public:
 	// initialize all the bitboards
 	// get whether user chooses to be white or black
 	ChessBoard() : didWin(false) {
-		pieceBitBoard[white]  = 0x000000000000ffff;
-		pieceBitBoard[black]  = 0xffff000000000000;
-		pieceBitBoard[king]   = 0x1000000000000010;
-		pieceBitBoard[queen]  = 0x0800000000000008;
-		pieceBitBoard[rook]   = 0x8100000000000081;
-		pieceBitBoard[bishop] = 0x2400000000000024;
-		pieceBitBoard[knight] = 0x4200000000000042;
-		pieceBitBoard[pawn]   = 0x00ff00000000ff00;
+		pieceBitBoard[white]  = origWhite;
+		pieceBitBoard[black]  = origBlack;
+		pieceBitBoard[king]   = origKing;
+		pieceBitBoard[queen]  = origQueen;
+		pieceBitBoard[rook]   = origRook;
+		pieceBitBoard[bishop] = origBishop;
+		pieceBitBoard[knight] = origKnight;
+		pieceBitBoard[pawn]   = origPawn;
 	}
 
 	// outputs to console 
@@ -79,7 +88,7 @@ void ChessBoard::drawBoard() {
 	int sideNumbers = 8;
 	// change board orientation based on which piece to start off.
 	// int alternateRow = ~whiteOrBlack;
-	int alternateRow = white;
+	bool alternateRow = white;
 	for (int i = 56; i >= 0; i-=8) {
 		std::cout << std::setw(2) << sideNumbers;
 		std::cout << "  |" << std::setw(4);
@@ -126,7 +135,7 @@ void ChessBoard::drawBoard() {
 		std::cout << std::setw(2);
 		std::cout << "|" << std::setw(3) << sideNumbers << std::endl;
 		sideNumbers--;
-		alternateRow = ~alternateRow;
+		alternateRow = !alternateRow;
 	}
 
 	createPostBoard();
@@ -159,6 +168,7 @@ void ChessBoard::createPostBoard(){
 
 void ChessBoard::move(short original, short destination) {
 	std::bitset<64> occupied = getAllPieces();
+
 	// first check if user even chose a piece
 	if (!occupied[original]) {
 		std::cout << "There isn't a piece there!" << std::endl;
@@ -166,32 +176,84 @@ void ChessBoard::move(short original, short destination) {
 	}
 
 	// white is 0 black is 1
-	short color = ~pieceBitBoard[white][original];
+	bool color = ~pieceBitBoard[white][original];
 	short pieceType = -1;
 
 	// figures out what piece the user is moving
-	for (int i = 2; i < 8; i++)
+	for (int i = 2; i < 8; i++) {
 		if (pieceBitBoard[i][original])
 			pieceType = i;
+	}
 
 	// TODO castling
 
 	// Make sure user isn't trying to move on their own piece
 	if (pieceBitBoard[color][destination]) {
 		std::cout << "You can't move onto your own piece!" << std::endl;
+		system("pause");
 		return;
 	}
 
 	// TODO check if move is valid with piece
 
-	std::bitset<64> pieceMoved = 0;;
-	pieceMoved[original] = true;
-	pieceMoved[destination] = true;
-	// verifies that user is not attacking
-	if (!occupied[destination]) {
-		pieceBitBoard[color] ^= pieceMoved;		// update color bitboard
-		pieceBitBoard[pieceType] ^= pieceMoved; //update piece specific bitboard
-	}
-	
+	std::bitset<64> fromBitBoard = 0, toBitBoard = 0;;
+	fromBitBoard[original] = 1;
+	toBitBoard[destination] = 1;
+	fromBitBoard ^= toBitBoard;
 
+	// verifies if user is attacking
+	if (occupied[destination]) {
+		short capturedPiece = -1;
+		for (int i = 2; i < 8; i++) {
+			if (pieceBitBoard[i][destination])
+				capturedPiece = i;
+		}	
+
+		pieceBitBoard[color] ^= fromBitBoard;		// update color bitboard
+		pieceBitBoard[pieceType] ^= fromBitBoard; //update piece specific bitboard
+		pieceBitBoard[!color] ^= toBitBoard; // update opponent bitboard
+		pieceBitBoard[capturedPiece] ^= toBitBoard; // gets rid of opponent piece
+	}
+	else {
+		pieceBitBoard[color] ^= fromBitBoard;		// update color bitboard
+		pieceBitBoard[pieceType] ^= fromBitBoard; //update piece specific bitboard
+	}
+
+	// promotion of pawn
+	std::bitset<64> oppositeRow = !color ? 0xff00000000000000 : 0x00000000000000ff;
+	// TODO REWRITE FOR COMPUTER LATER
+	if (pieceType == pawn && oppositeRow[destination]) {
+		std::cout << std::setw(23) << "Promotion!" << std::endl;
+		std::cout << "(q)ueen, (r)ook, (b)ishop, or (k)night: ";
+		bool correctUserInput = false;
+		char promotion;
+
+		// get rid of the pawn in the spot
+		pieceBitBoard[pawn] ^= toBitBoard;
+
+		while (!correctUserInput) {
+			std::cin >> promotion;
+			correctUserInput = true;
+			switch(toupper(promotion)) {
+				case 'Q': 
+					pieceBitBoard[queen] ^= toBitBoard;
+					break;
+				case 'R':
+					pieceBitBoard[rook] ^= toBitBoard;
+					break;
+				case 'B':
+					pieceBitBoard[bishop] ^= toBitBoard;
+					break;
+				case 'K':
+					pieceBitBoard[knight] ^= toBitBoard;
+					break;
+				default:
+					std::cout << "Improper input! Retry: ";
+					correctUserInput = false;
+					break;
+			}
+		}
+	}
+
+	system("pause");
 }

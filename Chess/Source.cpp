@@ -23,6 +23,7 @@ int main() {
 		}
 		else {
 			std::cout << "Improper input!" << std::endl;
+			system("pause");
 		}
 
 		system("cls");
