@@ -142,6 +142,7 @@
     <ClInclude Include="ChessBoard.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ChessBoard.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
