@@ -1,8 +1,5 @@
 #pragma once
-#include <iostream>
 #include <bitset>
-#include <iomanip>
-#include <string>
 
 class ChessBoard {
 public:
@@ -32,7 +29,7 @@ public:
 
 	// initialize all the bitboards
 	// get whether user chooses to be white or black
-	ChessBoard() : didWin(false) {
+	ChessBoard() {
 		pieceBitBoard[white]  = origWhite;
 		pieceBitBoard[black]  = origBlack;
 		pieceBitBoard[king]   = origKing;
@@ -43,7 +40,14 @@ public:
 		pieceBitBoard[pawn]   = origPawn;
 
 		// white always starts first
-		this->color = 0;
+		color = 0;
+		to = 0;
+		from = 0;
+		fiftyMoves = 0;
+		inCheck = false;
+		didWin = false;
+		pawnMovement = false;
+		capture = false;
 	}
 
 	// outputs to console 
@@ -60,11 +64,17 @@ public:
 		return pieceBitBoard[color];
 	}
 
+	void updateMove(short from, short to) {
+		this->from = from;
+		this->to = to;
+	}
+
 	// at the end of each valid move, turn changes
 	void changeTurn() {
 		this->color = !color;
 	}
 
+	// TODO actually finish the win condition
 	bool won() const {
 		return didWin;
 	}
@@ -72,18 +82,43 @@ public:
 	// this will handle all of the moving of the pieces
 	void move(short original, short destination);
 
+	void generateAttacks();
+
 private:
 	// store all bitboards in an array - 2 for each colors and the other for pieces
 	std::bitset<64> pieceBitBoard[8];
+	std::bitset<64> attackBB[8];
+
 	//int whiteOrBlack; // keeps track of user choice for updating the board initially
+
+	short from, to; // orign and destination
+	bool color; // keeps track of whose turn it is
+	bool inCheck;
+	bool didWin; // store win condition
+
+	void pawnPromotion(short pieceType, std::bitset<64> toBitBoard);
+	short getPieceType();
+	short getPieceType(short from);
 
 	//-------------helper functions for board outlay---------------//
 	void static createPreBoard();
 	void static createPostBoard();
+	//---------end of helper functions for board outlay------------//
 
-	bool color; // keeps track of whose turn it is
+	//--------------move validation---------------------//
+	bool validateMove(short piece);
+	bool validatePawnMovementForAttacks(short from, short to, bool color);
+	bool noBlockingPieces(short modifier) const;
+	//------------end of move validation----------------//
 
-	bool didWin; // store win condition
-	bool validateMove(short from, short to, short piece);
-	void pawnPromotion(short pieceType, short destination, std::bitset<64> toBitBoard);
+	//--------------------fifty move rule--------------------------//
+	// keep track of information for the fifty move rule
+	bool pawnMovement;
+	bool capture;
+	short fiftyMoves;
+
+	// fifty move stalemate applies if there is no capture
+	// or pawn movement over fifty moves
+	void fiftyMoveRule();
+	//---------------end of fifty move rule------------------------//
 };

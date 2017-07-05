@@ -1,5 +1,6 @@
 // This is currently here to test parts of my chessboard
 
+#include <iostream>
 #include "ChessBoard.h"
 
 short convertPositionToNum(char file, short rank);
@@ -13,6 +14,7 @@ int main() {
 	ChessBoard CB;
 
 	while (!CB.won()) {
+		CB.generateAttacks();
 		CB.drawBoard();
 		std::cout << "Piece to move and destination: ";
 		std::cin >> origFile >> origRank >> destFile >> destRank;
@@ -28,6 +30,9 @@ int main() {
 
 		system("cls");
 	}
+
+	std::cout << "Thanks for playing!" << std::endl;
+	return 0;
 }
 
 // this converts the 'A1' style input to a number
