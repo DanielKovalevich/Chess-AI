@@ -4,9 +4,9 @@
 class ChessBoard {
 public:
 	// Use this to eliminate moves on the A and H rank, ie, +-1, +-7, +-9
-	const std::bitset<64> 
-		notAFile   = 0xfefefefefefefefe, // ~0x010101010101010
-		notHFile   = 0x7f7f7f7f7f7f7f7f, // ~0x8080808080808080
+	const std::bitset<64>
+		AFile	   = 0x0101010101010101,
+		HFile	   = 0x8080808080808080,
 		origWhite  = 0x000000000000ffff,
 		origBlack  = 0xffff000000000000,
 		origKing   = 0x1000000000000010,
@@ -25,6 +25,17 @@ public:
 		bishop,
 		knight,
 		pawn
+	};
+
+	enum coordinates {
+		north = 8,
+		northEast = 9,
+		east = 1,
+		southEast = -7,
+		south = -8,
+		southWest = -9,
+		west = -1,
+		northWest = 7
 	};
 
 	// initialize all the bitboards
@@ -99,6 +110,7 @@ private:
 	void pawnPromotion(short pieceType, std::bitset<64> toBitBoard);
 	short getPieceType();
 	short getPieceType(short from);
+	void clearAttackBB();
 
 	//-------------helper functions for board outlay---------------//
 	void static createPreBoard();

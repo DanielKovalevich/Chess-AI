@@ -69,7 +69,15 @@ void ChessBoard::drawBoard() {
 	}
 
 	createPostBoard();
-	std::cout << attackBB[white] << std::endl;
+
+	// for testing purposes
+	for (int i = 56; i >= 0; i -= 8) {
+		for (int j = i; j - i < 8; j++) {
+			std::cout << attackBB[white][j];
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
 }
 
 void ChessBoard::createPreBoard() {
@@ -252,17 +260,17 @@ bool ChessBoard::validateMove(short piece) {
 		short modifiedDistance = distance;
 
 		// there cannot be pieces in the path of the queen
-		if (distance % 8 == 0) {
-			return positive ? noBlockingPieces(8) : noBlockingPieces(-8);
+		if (distance % north == 0) {
+			return positive ? noBlockingPieces(north) : noBlockingPieces(south);
 		}
-		if (distance % 7 == 0) {
-			return positive ? noBlockingPieces(7) : noBlockingPieces(-7);
+		if (distance % northWest == 0) {
+			return positive ? noBlockingPieces(northWest) : noBlockingPieces(southEast);
 		}
-		if (distance % 9 == 0) {
-			return positive ? noBlockingPieces(9) : noBlockingPieces(-9);
+		if (distance % northEast == 0) {
+			return positive ? noBlockingPieces(northEast) : noBlockingPieces(southWest);
 		}
-		if (distance >= leftMaxRange && distance <= rightMaxRange) {
-			return positive ? noBlockingPieces(1) : noBlockingPieces(-1);
+		if (to - from + from >= leftMaxRange && to - from + from <= rightMaxRange) {
+			return positive ? noBlockingPieces(east) : noBlockingPieces(west);
 		}
 
 		std::cout << "The queen can't move that way!" << std::endl;
@@ -270,25 +278,26 @@ bool ChessBoard::validateMove(short piece) {
 	}
 
 	if (piece == rook) {
-		if (distance % 8 == 0)
-			return positive ? noBlockingPieces(8) : noBlockingPieces(-8);
-		if (distance >= leftMaxRange && distance <= rightMaxRange)
-			return positive ? noBlockingPieces(1) : noBlockingPieces(-1);
+		if (distance % north == 0)
+			return positive ? noBlockingPieces(north) : noBlockingPieces(south);
+		if (to - from + from >= leftMaxRange && to - from + from <= rightMaxRange)
+			return positive ? noBlockingPieces(east) : noBlockingPieces(west);
 		
 		std::cout << "The rook can't move that way!" << std::endl;
 		return false;
 	}
 
 	if (piece == bishop) {
-		if (distance % 7 == 0)
-			return positive ? noBlockingPieces(7) : noBlockingPieces(-7);
-		if (distance % 9 == 0)
-			return positive ? noBlockingPieces(9) : noBlockingPieces(-9);
+		if (distance % northWest == 0)
+			return positive ? noBlockingPieces(northWest) : noBlockingPieces(southEast);
+		if (distance % northEast == 0)
+			return positive ? noBlockingPieces(northEast) : noBlockingPieces(southWest);
 		
 		std::cout << "The bishop can't move that way!" << std::endl;
 		return false;
 	}
 
+	// knight moves in an L-shape so I just used the numbers
 	if (piece == knight) {
 		return distance == 6 || distance == 10 || distance == 15 || distance == 17;
 	}
@@ -299,8 +308,8 @@ bool ChessBoard::validateMove(short piece) {
 			return false;
 		}
 		std::bitset<64> colorPawns = getPieces(this->color, pawn);
-		std::bitset<64> WrapAFile = colorPawns & notAFile;
-		std::bitset<64> WrapHFile = colorPawns & notHFile;
+		std::bitset<64> WrapAFile = colorPawns & ~AFile;
+		std::bitset<64> WrapHFile = colorPawns & ~HFile;
 
 		// makes sure user can't just try to wrap around the board
 		if (pieceBitBoard[white][from] && distance == 7 && !WrapAFile[from] || pieceBitBoard[black][from] && distance == 9 && !WrapAFile[from])
@@ -311,7 +320,7 @@ bool ChessBoard::validateMove(short piece) {
 		this->pawnMovement = true;
 
 		// verify there is an enemy piece on diagonal square
-		if (distance == 7 || distance == 9) {
+		if (distance == northEast || distance == northWest) {
 			return pieceBitBoard[!this->color][to];
 		}
 
@@ -334,8 +343,8 @@ bool ChessBoard::validatePawnMovementForAttacks(short from, short to, bool color
 		return false;
 	}
 	std::bitset<64> colorPawns = getPieces(color, pawn);
-	std::bitset<64> WrapAFile = colorPawns & notAFile;
-	std::bitset<64> WrapHFile = colorPawns & notHFile;
+	std::bitset<64> WrapAFile = colorPawns & ~AFile;
+	std::bitset<64> WrapHFile = colorPawns & ~HFile;
 
 	// makes sure user can't just try to wrap around the board
 	if (pieceBitBoard[white][from] && distance == 7 && !WrapAFile[from] || pieceBitBoard[black][from] && distance == 9 && !WrapAFile[from])
@@ -343,7 +352,7 @@ bool ChessBoard::validatePawnMovementForAttacks(short from, short to, bool color
 	if (pieceBitBoard[white][from] && distance == 9 && !WrapHFile[from] || pieceBitBoard[black][from] && distance == 7 && !WrapHFile[from])
 		return false;
 
-	return distance == 7 || distance == 9;
+	return distance == northEast || distance == northWest;
 }
 
 
@@ -374,41 +383,95 @@ void ChessBoard::fiftyMoveRule() {
 	}
 }
 
-// this generates all possible attacks. This help
+// this generates all possible attacks. This helps with doing the check validation
 void ChessBoard::generateAttacks() {
+	clearAttackBB();
 	std::bitset<64> occupied = getAllPieces();
 	short pieceType = 0;
-	bool pieceColor = 0;
+	bool pieceColor = white;
 	for (int i = 0; i < 64; i++) {
 		if (occupied[i] == 1) {
-			
 			pieceType = getPieceType(i);
-			// white is 0; black is 1
-			pieceColor = occupied[i] & pieceBitBoard[0][i] ? 0 : 1;
+			pieceColor = occupied[i] & pieceBitBoard[0][i] ? white : black;
 
 			if (pieceType == pawn) {
-				if (validatePawnMovementForAttacks(i, i + 7, pieceColor) && !pieceBitBoard[pieceColor][i + 7]) {
-					attackBB[pawn][i + 7] = true;
-					attackBB[pieceColor][i + 7] = true;
+				if (validatePawnMovementForAttacks(i, i + northWest, pieceColor) && !pieceBitBoard[pieceColor][i + northWest]) {
+					attackBB[pawn][i + northWest] = true;
+					attackBB[pieceColor][i + northWest] = true;
 				}
-				if (validatePawnMovementForAttacks(i, i + 9, pieceColor) && !pieceBitBoard[pieceColor][i + 9]) {
-					attackBB[pawn][i + 9] = true;
-					attackBB[pieceColor][i + 9] = true;
+				if (validatePawnMovementForAttacks(i, i + northEast, pieceColor) && !pieceBitBoard[pieceColor][i + northEast]) {
+					attackBB[pawn][i + northEast] = true;
+					attackBB[pieceColor][i + northEast] = true;
 				}
-				if (validatePawnMovementForAttacks(i, i + -7, pieceColor) && !pieceBitBoard[pieceColor][i + -7]) {
-					attackBB[pawn][i + -7] = true;
-					attackBB[pieceColor][i + -7] = true;
+				if (validatePawnMovementForAttacks(i, i + southEast, pieceColor) && !pieceBitBoard[pieceColor][i + southEast]) {
+					attackBB[pawn][i + southEast] = true;
+					attackBB[pieceColor][i + southEast] = true;
 				}
-				if (validatePawnMovementForAttacks(i, i + -9, pieceColor) && !pieceBitBoard[pieceColor][i + -9]) {
-					attackBB[pawn][i + -9] = true;
-					attackBB[pieceColor][i + -9] = true;
+				if (validatePawnMovementForAttacks(i, i + southWest, pieceColor) && !pieceBitBoard[pieceColor][i + southWest]) {
+					attackBB[pawn][i + southWest] = true;
+					attackBB[pieceColor][i + southWest] = true;
 				}
 			}
+			
+
+			if (pieceType == queen) {
+				short possibleMoves[8] = { north, northWest, northEast, east, southEast, south, southWest, west };
+				for (short move : possibleMoves) {
+					short possibleMove = i + move;
+					bool enemyPiece = false;
+					bool ownPiece = false;
+					// if the queen is on the edge, restrict some of the moves
+					// this must be done or else the moves wrap around the board
+					bool edge = AFile[i] && (move == northWest || move == southWest || move == west) || 
+								HFile[i] && (move == northEast || move == southEast || move == east);
+
+					bool outOfRange = false;
+					if (possibleMove >= 0 && possibleMove <= 63) {
+						// steps through each space in every direction and stops when it hits a same color piece
+						// it will also stop if it hits the edge of the board or gets out of range
+						while (!ownPiece && !enemyPiece && !edge && !outOfRange) {
+							// checks if the pieces reach the edge
+							if ((HFile[possibleMove] || AFile[possibleMove]) && move != north && move != south) {
+								attackBB[queen][possibleMove] = true;
+								attackBB[pieceColor][possibleMove] = true;
+								edge = true;
+							}
+							
+							// if it's an enemy piece mark space as attack and break out
+							if (pieceBitBoard[!pieceColor][possibleMove]) {
+								attackBB[queen][possibleMove] = true;
+								attackBB[pieceColor][possibleMove] = true;
+								enemyPiece = true;
+							} 
+							else if (pieceBitBoard[pieceColor][possibleMove]) {
+								ownPiece = true;
+							}
+							else {
+								attackBB[queen][possibleMove] = true;
+								attackBB[pieceColor][possibleMove] = true;
+								possibleMove += move;
+							}
+
+							// checks the range each time with the modified value
+							if (possibleMove < 0 || possibleMove > 63) {
+								outOfRange = true;
+							}
+						}
+					}
+				}
+			}
+
+
+
 			// TODO fix king attack so he cannot attack onto space that will cause check
 			if (pieceType == king) {
-				short possibleMoves[8] = { -1, -7, -8, -9, 1, 7, 8, 9 };
+				short possibleMoves[8] = { north, northWest, northEast, east, southEast, south, southWest, west };
 				for (short move : possibleMoves) {
-					if (i + move >= 0 && i + move <= 63) {
+					// avoid wrapping around the board
+					bool edge = AFile[i] && (move == northWest || move == southWest || move == west) ||
+						HFile[i] && (move == northEast || move == southEast || move == east);
+
+					if (i + move >= 0 && i + move <= 63 && !edge) {
 						if (!pieceBitBoard[pieceColor][i + move]) {
 							attackBB[king][i + move] = true;
 							attackBB[pieceColor][i + move] = true;
@@ -416,45 +479,13 @@ void ChessBoard::generateAttacks() {
 					}
 				}
 			}
-
-			if (pieceType == queen) {
-				short possibleMoves[8] = { -1, -7, -8, -9, 1, 7, 8, 9 };
-				/*
-				for (short move : possibleMoves) {
-					short modifier = 0;
-					bool enemyPiece = false;
-					bool edge = false;
-					if (i + move >= 0 && i + move <= 63) {
-						// steps through each space in every direction and stops when it hits a piece
-						// it will also stop if it hits the edge of the board
-						while (!pieceBitBoard[pieceColor][i + modifier + move] && !enemyPiece && !edge) {
-							attackBB[queen][i + modifier + move] = true;
-							attackBB[pieceColor][i + modifier + move] = true;
-							modifier += move;
-							// if it's an enemy piece mark space as attack and break out
-							if (pieceBitBoard[!pieceColor][i + modifier + move]) {
-								attackBB[queen][i + modifier + move] = true;
-								attackBB[pieceColor][i + modifier + move] = true;
-								enemyPiece = true;
-							}
-
-							if (!notHFile[i + modifier + move]) {
-								attackBB[queen][i + modifier + move] = true;
-								attackBB[pieceColor][i + modifier + move] = true;
-								edge = true;
-							}
-
-							if (!notAFile[i + modifier + move]) {
-								attackBB[queen][i + modifier + move] = true;
-								attackBB[pieceColor][i + modifier + move] = true;
-								edge = true;
-							}
-						}
-					}
-				}
-				*/
-			}
-
 		}
+	}
+}
+
+// clears the bitboards each time so previous attacks don't stay
+void ChessBoard::clearAttackBB() {
+	for (int i = 0; i < 8; i++) {
+		attackBB[i] = 0x0;
 	}
 }
