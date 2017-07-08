@@ -128,7 +128,7 @@ void ChessBoard::move(short original, short destination) {
 		return;
 	}
 
-	if (!validateMove(pieceType)) {
+	if (!validateMove(pieceType) || to < 0 || to > 63) {
 		std::cout << "That is not a valid move!" << std::endl;
 		system("pause");
 		return;
@@ -299,6 +299,30 @@ bool ChessBoard::validateMove(short piece) {
 
 	// knight moves in an L-shape so I just used the numbers
 	if (piece == knight) {
+		short realDistance = to - from;
+
+		//--------------------------------------literal edge cases------------------------------------------------------------//
+		if (AFile[from] && (realDistance == 15 || realDistance == -10 || realDistance == 6 || realDistance == -17)) {
+			std::cout << "You cannot move beyond the board!" << std::endl;
+			return false;
+		}
+
+		if (AFile[from - 1] && (realDistance == -10 || realDistance == 6)) {
+			std::cout << "You cannot move beyond the board!" << std::endl;
+			return false;
+		}
+
+		if (HFile[from] && (realDistance == 17 || realDistance == 10 || realDistance == -6 || realDistance == -15)) {
+			std::cout << "You cannot move beyond the board!" << std::endl;
+			return false;
+		}
+
+		if (HFile[from + 1] && (realDistance == 10 || realDistance == -6)) {
+			std::cout << "You cannot move beyond the board!" << std::endl;
+			return false;
+		}
+		//--------------------------------------literal edge cases------------------------------------------------------------//
+
 		return distance == 6 || distance == 10 || distance == 15 || distance == 17;
 	}
 
@@ -411,59 +435,136 @@ void ChessBoard::generateAttacks() {
 					attackBB[pawn][i + southWest] = true;
 					attackBB[pieceColor][i + southWest] = true;
 				}
+
+				// TODO en passant
 			}
 			
-
 			if (pieceType == queen) {
 				short possibleMoves[8] = { north, northWest, northEast, east, southEast, south, southWest, west };
 				for (short move : possibleMoves) {
 					short possibleMove = i + move;
-					bool enemyPiece = false;
-					bool ownPiece = false;
 					// if the queen is on the edge, restrict some of the moves
 					// this must be done or else the moves wrap around the board
 					bool edge = AFile[i] && (move == northWest || move == southWest || move == west) || 
 								HFile[i] && (move == northEast || move == southEast || move == east);
 
-					bool outOfRange = false;
-					if (possibleMove >= 0 && possibleMove <= 63) {
-						// steps through each space in every direction and stops when it hits a same color piece
-						// it will also stop if it hits the edge of the board or gets out of range
-						while (!ownPiece && !enemyPiece && !edge && !outOfRange) {
-							// checks if the pieces reach the edge
-							if ((HFile[possibleMove] || AFile[possibleMove]) && move != north && move != south) {
-								attackBB[queen][possibleMove] = true;
-								attackBB[pieceColor][possibleMove] = true;
-								edge = true;
-							}
-							
-							// if it's an enemy piece mark space as attack and break out
-							if (pieceBitBoard[!pieceColor][possibleMove]) {
-								attackBB[queen][possibleMove] = true;
-								attackBB[pieceColor][possibleMove] = true;
-								enemyPiece = true;
-							} 
-							else if (pieceBitBoard[pieceColor][possibleMove]) {
-								ownPiece = true;
-							}
-							else {
-								attackBB[queen][possibleMove] = true;
-								attackBB[pieceColor][possibleMove] = true;
-								possibleMove += move;
-							}
-
-							// checks the range each time with the modified value
-							if (possibleMove < 0 || possibleMove > 63) {
-								outOfRange = true;
-							}
+					// steps through each space in every direction and stops when it hits a same color piece
+					// it will also stop if it hits the edge of the board or gets out of range
+					while (possibleMove >= 0 && possibleMove <= 63 && !edge) {
+						// don't want to restrict it from moving along the edge
+						if ((HFile[possibleMove] || AFile[possibleMove]) && move != north && move != south) {
+							attackBB[queen][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
 						}
+
+						// if it's an enemy piece mark space as attack and break out
+						if (pieceBitBoard[!pieceColor][possibleMove]) {
+							attackBB[queen][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
+						}
+						
+						if (pieceBitBoard[pieceColor][possibleMove]) {
+							break;
+						}
+
+						attackBB[queen][possibleMove] = true;
+						attackBB[pieceColor][possibleMove] = true;
+						possibleMove += move;
 					}
 				}
 			}
 
+			if (pieceType == rook) {
+				short possibleMoves[4] = { north, east, south, west };
+				for (short move : possibleMoves) {
+					short possibleMove = i + move;
 
+					bool edge = AFile[i] && move == west || HFile[i] && move == east;
+					while (possibleMove >= 0 && possibleMove <= 63 && !edge) {
+						// don't want to restrict it from moving along the edge
+						if ((HFile[possibleMove] || AFile[possibleMove]) && move != north && move != south) {
+							attackBB[rook][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
+						}
 
-			// TODO fix king attack so he cannot attack onto space that will cause check
+						if (pieceBitBoard[!pieceColor][possibleMove]) {
+							attackBB[rook][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
+						}
+
+						if (pieceBitBoard[pieceColor][possibleMove]) {
+							break;
+						}
+
+						attackBB[rook][possibleMove] = true;
+						attackBB[pieceColor][possibleMove] = true;
+						possibleMove += move;
+					}
+				}
+			}
+
+			if (pieceType == bishop) {
+				short possibleMoves[4] = { northEast, southEast, southWest, northWest };
+				for (short move : possibleMoves) {
+					short possibleMove = i + move;
+
+					bool edge = AFile[i] && (move == northWest || move == southWest) || 
+								HFile[i] && (move == northEast || move == southEast);
+					while (possibleMove >= 0 && possibleMove <= 63 && !edge) {
+						if (HFile[possibleMove] || AFile[possibleMove]) {
+							attackBB[bishop][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
+						}
+
+						if (pieceBitBoard[!pieceColor][possibleMove]) {
+							attackBB[bishop][possibleMove] = true;
+							attackBB[pieceColor][possibleMove] = true;
+							break;
+						}
+
+						if (pieceBitBoard[pieceColor][possibleMove]) {
+							break;
+						}
+
+						attackBB[bishop][possibleMove] = true;
+						attackBB[pieceColor][possibleMove] = true;
+						possibleMove += move;
+					}
+				}
+			}
+
+			if (pieceType == knight) {
+				short possibleMoves[8] = { -6, 6, -10, 10, -15, 15, -17, 17 };
+
+				for (short move : possibleMoves) {
+					bool edge = false;
+
+					if (i + move >= 0 && i + move <= 63) {
+						// separated all the edge case conditions so that it is easier to read
+						if (AFile[i] && (move == 15 || move == -10 || move == 6 || move == -17))
+							edge = true;
+						else if (AFile[i] && (move == -10 || move == 6))
+							edge = true;
+						else if (HFile[i] && (move == 17 || move == 10 || move == -6 || move == -15))
+							edge = true;
+						else if (HFile[i] && (move == 10 || move == -6))
+							edge = true;
+
+						if (!edge && !pieceBitBoard[pieceColor][i + move]) {
+							attackBB[knight][i + move] = true;
+							attackBB[pieceColor][i + move] = true;
+						}
+					}
+					
+				}
+
+			}
+
 			if (pieceType == king) {
 				short possibleMoves[8] = { north, northWest, northEast, east, southEast, south, southWest, west };
 				for (short move : possibleMoves) {
@@ -472,7 +573,8 @@ void ChessBoard::generateAttacks() {
 						HFile[i] && (move == northEast || move == southEast || move == east);
 
 					if (i + move >= 0 && i + move <= 63 && !edge) {
-						if (!pieceBitBoard[pieceColor][i + move]) {
+						// makes sure king won't try to attack own piece or space that will get attacked
+						if (!pieceBitBoard[pieceColor][i + move] && !attackBB[~pieceColor][i + move]) {
 							attackBB[king][i + move] = true;
 							attackBB[pieceColor][i + move] = true;
 						}
