@@ -14,21 +14,45 @@ int main() {
 	ChessBoard CB;
 
 	while (!CB.won()) {
-		CB.generateAttacks();
 		CB.drawBoard();
-		std::cout << "Piece to move and destination: ";
-		std::cin >> origFile >> origRank >> destFile >> destRank;
-		origFile = toupper(origFile);
-		destFile = toupper(destFile);
-		if (verifyPositionInput(origFile, origRank) && verifyPositionInput(destFile, destRank)) {
-			CB.move(convertPositionToNum(origFile, origRank), convertPositionToNum(destFile, destRank));
-		}
-		else {
-			std::cout << "Improper input!" << std::endl;
-			system("pause");
+
+		if (CB.inCheck) {
+			CB.isCheckMate();
 		}
 
-		system("cls");
+		// don't want input on a checkmate
+		if (!CB.won()) {
+			std::cout << "Piece to move and destination: ";
+			std::cin >> origFile >> origRank >> destFile >> destRank;
+			origFile = toupper(origFile);
+			destFile = toupper(destFile);
+			if (CB.inCheck && verifyPositionInput(origFile, origRank) && verifyPositionInput(destFile, destRank)) {
+				// used to restore the threat piece position
+				CB.generateAttacks();
+				auto move = convertPositionToNum(destFile, destRank);
+
+				if (CB.possibleMovements[move] || CB.threatPiece[move]) {
+					if (CB.move(convertPositionToNum(origFile, origRank), convertPositionToNum(destFile, destRank))) {
+						CB.inCheck = false;
+						CB.possibleMovements = 0x0;
+						CB.possibleMovements = 0x0;
+					}
+				}
+				else {
+					std::cout << "You must get the king out of danger first!" << std::endl;
+					system("pause");
+				}
+
+			}
+			else if (verifyPositionInput(origFile, origRank) && verifyPositionInput(destFile, destRank)) {
+				CB.move(convertPositionToNum(origFile, origRank), convertPositionToNum(destFile, destRank));
+			}
+			else {
+				std::cout << "Improper input!" << std::endl;
+				system("pause");
+			}
+			system("cls");
+		}
 	}
 
 	std::cout << "Thanks for playing!" << std::endl;

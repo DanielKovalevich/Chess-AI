@@ -11,7 +11,7 @@
 // this function prints out the ASCII chessboard to the console
 // i want to see if I can do it all in the console before moving to a GUI
 void ChessBoard::drawBoard() {
-	std::bitset<64> occupied = getAllPieces();
+	auto occupied = getAllPieces();
 
 	createPreBoard();
 
@@ -71,6 +71,7 @@ void ChessBoard::drawBoard() {
 	createPostBoard();
 
 	// for testing purposes
+	// TODO delete when done
 	for (int i = 56; i >= 0; i -= 8) {
 		for (int j = i; j - i < 8; j++) {
 			std::cout << attackBB[white][j];
@@ -105,8 +106,8 @@ void ChessBoard::createPostBoard() {
 
 // ------------------------------------End of Board Creation---------------------------------- //
 
-void ChessBoard::move(short original, short destination) {
-	std::bitset<64> occupied = getAllPieces();
+bool ChessBoard::move(short original, short destination) {
+	auto occupied = getAllPieces();
 
 	// update class data members
 	updateMove(original, destination);
@@ -115,7 +116,7 @@ void ChessBoard::move(short original, short destination) {
 	if (!occupied[original]) {
 		std::cout << "There isn't a piece there!" << std::endl;
 		system("pause");
-		return;
+		return false;
 	}
 
 	// white is 0 black is 1
@@ -125,13 +126,13 @@ void ChessBoard::move(short original, short destination) {
 	if (pieceBitBoard[!this->color][this->from]) {
 		std::cout << "It's not your turn!" << std::endl;
 		system("pause");
-		return;
+		return false;
 	}
 
 	if (!validateMove(pieceType) || to < 0 || to > 63) {
 		std::cout << "That is not a valid move!" << std::endl;
 		system("pause");
-		return;
+		return false;
 	}
 
 	// TODO castling
@@ -140,14 +141,14 @@ void ChessBoard::move(short original, short destination) {
 	if (pieceBitBoard[color][this->to]) {
 		std::cout << "You can't move onto your own piece!" << std::endl;
 		system("pause");
-		return;
+		return false;
 	}
 
 	// TODO en passant
 
-	std::bitset<64> fromBitBoard = 0, toBitBoard = 0;;
-	fromBitBoard[this->from] = 1;
-	toBitBoard[this->to] = 1;
+	std::bitset<64> fromBitBoard = 0x0, toBitBoard = 0x0;
+	fromBitBoard[this->from] = true;
+	toBitBoard[this->to] = true;
 	fromBitBoard ^= toBitBoard;
 
 	// verifies if user is attacking
@@ -173,8 +174,12 @@ void ChessBoard::move(short original, short destination) {
 	pawnPromotion(pieceType, toBitBoard);
 
 	fiftyMoveRule();
+	generateAttacks();
+	isInCheck();
 	changeTurn();
 	system("pause");
+
+	return true;
 }
 
 // figures out what type of piece the user is trying to move
@@ -204,7 +209,6 @@ short ChessBoard::getPieceType(short from) {
 
 
 // special rule in chess
-// TODO REWRITE FOR COMPUTER LATER
 void ChessBoard::pawnPromotion(short pieceType, std::bitset<64> toBitBoard) {
 	std::bitset<64> oppositeRow = !this->color ? 0xff00000000000000 : 0x00000000000000ff;
 	if (pieceType == pawn && oppositeRow[this->to]) {
@@ -241,7 +245,7 @@ void ChessBoard::pawnPromotion(short pieceType, std::bitset<64> toBitBoard) {
 	}
 }
 
-// TODO finish king validation
+// TODO validate edge cases
 // verifies if move corresponds with piece
 // also makes sure there aren't any pieces in the way
 bool ChessBoard::validateMove(short piece) {
@@ -253,12 +257,59 @@ bool ChessBoard::validateMove(short piece) {
 	short rightMaxRange = 7 + leftMaxRange;
 
 	if (piece == king) {
+		// since the king moves in every direction, i only included the absolutes
+		short possibleMoves[8] = { north, northWest, northEast, east};
+
+		if (pieceBitBoard[!color][to]) {
+			// this will allow me to temporarily modify the piecebitboards
+			// to check if the king can actually attack the piece without going into check
+			std::bitset<64> temp[8];
+			for (auto i = 0; i < 8; i++) {
+				temp[i] = pieceBitBoard[i];
+			}
+
+			auto piecePos = getPieceType(to);
+			std::bitset<64> fromBitBoard = 0x0, toBitBoard = 0x0;
+			fromBitBoard[this->from] = true;
+			toBitBoard[this->to] = true;
+			fromBitBoard ^= toBitBoard;
+
+			pieceBitBoard[color] ^= fromBitBoard;
+			pieceBitBoard[king] ^= fromBitBoard;
+			pieceBitBoard[!color] ^= toBitBoard;
+			pieceBitBoard[piecePos] ^= toBitBoard;
+
+			generateAttacks();
+
+			auto kingBB = getPieces(color, king);
+
+			if ((kingBB & attackBB[!color]) == 0x0) {
+				
+				return true;
+			}
+
+			// revert the boards to normal if the above condition fails
+			for (auto i = 0; i < 8; i++) {
+				pieceBitBoard[i] = temp[i];
+			}
+
+			std::cout << "That would put your king in check!" << std::endl;
+			return false;
+		}
+
+		if (!attackBB[!color][to]) {
+			// verifies the move is possible
+			for (auto move : possibleMoves) {
+				if (move == distance)
+					return true;
+			}
+		}
+		
+		return false;
 
 	}
 
 	if (piece == queen) {
-		short modifiedDistance = distance;
-
 		// there cannot be pieces in the path of the queen
 		if (distance % north == 0) {
 			return positive ? noBlockingPieces(north) : noBlockingPieces(south);
@@ -331,9 +382,9 @@ bool ChessBoard::validateMove(short piece) {
 		if ((pieceBitBoard[white][from] && to - from < 0) || (pieceBitBoard[black][from] && to - from > 0)) {
 			return false;
 		}
-		std::bitset<64> colorPawns = getPieces(this->color, pawn);
-		std::bitset<64> WrapAFile = colorPawns & ~AFile;
-		std::bitset<64> WrapHFile = colorPawns & ~HFile;
+		auto colorPawns = getPieces(this->color, pawn);
+		auto WrapAFile = colorPawns & ~AFile;
+		auto WrapHFile = colorPawns & ~HFile;
 
 		// makes sure user can't just try to wrap around the board
 		if (pieceBitBoard[white][from] && distance == 7 && !WrapAFile[from] || pieceBitBoard[black][from] && distance == 9 && !WrapAFile[from])
@@ -407,33 +458,45 @@ void ChessBoard::fiftyMoveRule() {
 	}
 }
 
+//----------------------------------------check validation------------------------------------------------------//
 // this generates all possible attacks. This helps with doing the check validation
 void ChessBoard::generateAttacks() {
 	clearAttackBB();
-	std::bitset<64> occupied = getAllPieces();
-	short pieceType = 0;
-	bool pieceColor = white;
+	auto occupied = getAllPieces();
 	for (int i = 0; i < 64; i++) {
 		if (occupied[i] == 1) {
-			pieceType = getPieceType(i);
-			pieceColor = occupied[i] & pieceBitBoard[0][i] ? white : black;
+			short pieceType = getPieceType(i);
+			bool pieceColor = occupied[i] & pieceBitBoard[0][i] ? white : black;
 
 			if (pieceType == pawn) {
 				if (validatePawnMovementForAttacks(i, i + northWest, pieceColor) && !pieceBitBoard[pieceColor][i + northWest]) {
 					attackBB[pawn][i + northWest] = true;
 					attackBB[pieceColor][i + northWest] = true;
+					if (pieceBitBoard[king][i + northWest] & pieceBitBoard[!pieceColor][i + northWest]) {
+						threatPiece[i] = true;
+						threatPiece[i] = true;
+					}
 				}
 				if (validatePawnMovementForAttacks(i, i + northEast, pieceColor) && !pieceBitBoard[pieceColor][i + northEast]) {
 					attackBB[pawn][i + northEast] = true;
 					attackBB[pieceColor][i + northEast] = true;
+					if (pieceBitBoard[king][i + northEast] & pieceBitBoard[!pieceColor][i + northEast]) {
+						threatPiece[i] = true;
+					}
 				}
 				if (validatePawnMovementForAttacks(i, i + southEast, pieceColor) && !pieceBitBoard[pieceColor][i + southEast]) {
 					attackBB[pawn][i + southEast] = true;
 					attackBB[pieceColor][i + southEast] = true;
+					if (pieceBitBoard[king][i + southEast] & pieceBitBoard[!pieceColor][i + southEast]) {
+						threatPiece[i] = true;
+					}
 				}
 				if (validatePawnMovementForAttacks(i, i + southWest, pieceColor) && !pieceBitBoard[pieceColor][i + southWest]) {
 					attackBB[pawn][i + southWest] = true;
 					attackBB[pieceColor][i + southWest] = true;
+					if (pieceBitBoard[king][i + southWest] & pieceBitBoard[!pieceColor][i + southWest]) {
+						threatPiece[i] = true;
+					}
 				}
 
 				// TODO en passant
@@ -462,6 +525,9 @@ void ChessBoard::generateAttacks() {
 						if (pieceBitBoard[!pieceColor][possibleMove]) {
 							attackBB[queen][possibleMove] = true;
 							attackBB[pieceColor][possibleMove] = true;
+							if (pieceBitBoard[king][possibleMove] & pieceBitBoard[!pieceColor][possibleMove]) {
+								threatPiece[i] = true;
+							}
 							break;
 						}
 						
@@ -493,6 +559,9 @@ void ChessBoard::generateAttacks() {
 						if (pieceBitBoard[!pieceColor][possibleMove]) {
 							attackBB[rook][possibleMove] = true;
 							attackBB[pieceColor][possibleMove] = true;
+							if (pieceBitBoard[king][possibleMove] & pieceBitBoard[!pieceColor][possibleMove]) {
+								threatPiece[i] = true;
+							}
 							break;
 						}
 
@@ -524,6 +593,9 @@ void ChessBoard::generateAttacks() {
 						if (pieceBitBoard[!pieceColor][possibleMove]) {
 							attackBB[bishop][possibleMove] = true;
 							attackBB[pieceColor][possibleMove] = true;
+							if (pieceBitBoard[king][possibleMove] & pieceBitBoard[!pieceColor][possibleMove]) {
+								threatPiece[i] = true;
+							}
 							break;
 						}
 
@@ -558,6 +630,9 @@ void ChessBoard::generateAttacks() {
 						if (!edge && !pieceBitBoard[pieceColor][i + move]) {
 							attackBB[knight][i + move] = true;
 							attackBB[pieceColor][i + move] = true;
+							if (pieceBitBoard[king][i + move] & pieceBitBoard[!pieceColor][i + move]) {
+								threatPiece[i] = true;
+							}
 						}
 					}
 					
@@ -574,7 +649,7 @@ void ChessBoard::generateAttacks() {
 
 					if (i + move >= 0 && i + move <= 63 && !edge) {
 						// makes sure king won't try to attack own piece or space that will get attacked
-						if (!pieceBitBoard[pieceColor][i + move] && !attackBB[~pieceColor][i + move]) {
+						if (!pieceBitBoard[pieceColor][i + move] && !attackBB[!pieceColor][i + move]) {
 							attackBB[king][i + move] = true;
 							attackBB[pieceColor][i + move] = true;
 						}
@@ -591,3 +666,89 @@ void ChessBoard::clearAttackBB() {
 		attackBB[i] = 0x0;
 	}
 }
+
+// checks if the king is sitting on one of the possible spaces of attack
+void ChessBoard::isInCheck() {
+	auto enemyKing = getPieces(!color, king);
+	
+	if ((enemyKing & attackBB[color]) != 0x0) {
+		inCheck = true;
+		std::cout << "Check!" << std::endl;
+	}
+}
+
+// checks for all possibilities of a checkmate
+void ChessBoard::isCheckMate() {
+	auto kingPiece = getPieces(color, king);
+	short possibleMoves[8] = { north, northWest, northEast, east, southEast, south, southWest, west };
+	bool attackMove = false;
+	short position = 0;
+
+	// first i need to find the position of the king
+	bool found = false;
+	while (!found) {
+		kingPiece[position] ? found = true : position++;
+	}
+
+	// check if the king can escape the check by moving
+	for (auto move : possibleMoves) {
+		if (move + position >= 0 && move + position <= 63) {
+			if (!attackBB[!color][move + position] && !pieceBitBoard[color][move + position]) {
+				possibleMovements[move + position] = true;
+			}
+			// finds if king can attack enemy piece - temp attacks and then checks if it is valid
+			if (pieceBitBoard[!color][move + position]) {
+				auto piece = getPieceType(move + position);
+				// i need one to store just the initial pos while other holds the destination too
+				std::bitset<64> tempPieceBB = 0x0, tempInitialBB = 0x0;
+				tempInitialBB[move + position] = true;
+				tempPieceBB[move + position] = true;
+				tempPieceBB[position] = true;
+
+				// this will allow me to temporarily modify the piecebitboards to generate possible attacks
+				std::bitset<64> temp[8];
+				for (auto i = 0; i < 8; i++) {
+					temp[i] = pieceBitBoard[i];
+				}
+
+				pieceBitBoard[color] ^= tempPieceBB;
+				pieceBitBoard[king] ^= tempPieceBB;
+				pieceBitBoard[!color] ^= tempInitialBB;
+				pieceBitBoard[piece] ^= tempInitialBB;
+
+				generateAttacks();
+
+				auto kingBB = getPieces(color, king);
+
+				if ((kingBB & attackBB[!color]) == 0x0) {
+					possibleMovements[move + position] = true;
+				}
+
+				// revert the bitboards back to normal
+				for (auto i = 0; i < 8; i++) {
+					pieceBitBoard[i] = temp[i];
+				}
+			}
+		}
+	}
+
+	// checks if it is possible for the attacking pieces to be taken out
+	if (threatPiece.any()) {
+		for (int i = 0; i < 64; i++) {
+			if (threatPiece[i] & attackBB[color][i]) {
+				threatPiece[i] = false;
+			}
+		}
+	}
+
+	// if all escapes fail, the game ends
+	if (possibleMovements.any() && !attackMove && threatPiece.any()) {
+		std::cout << "Checkmate!" << std::endl;
+		std::cout << (color ? "White" : "Black") << " is the winner" << std::endl;
+		didWin = true;
+		system("pause");
+	}
+}
+
+
+//----------------------------------------end of check validation------------------------------------------------------//

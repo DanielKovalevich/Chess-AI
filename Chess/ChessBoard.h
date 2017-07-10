@@ -85,15 +85,28 @@ public:
 		this->color = !color;
 	}
 
-	// TODO actually finish the win condition
 	bool won() const {
 		return didWin;
 	}
 
 	// this will handle all of the moving of the pieces
-	void move(short original, short destination);
+	bool move(short original, short destination);
 
 	void generateAttacks();
+
+	void isCheckMate();
+
+	//--------------------check validation-------------------------//
+	bool inCheck;
+	bool didWin; // store win condition
+				 // stores the possible moves to avoid checkmate
+				 // makes for checking check-avoiding-moves easier
+	std::bitset<64> possibleMovements;
+	// stores the position of the attacking pieces
+	std::bitset<64> threatPiece;
+
+	void isInCheck();
+	//-----------------end of check validation---------------------//
 
 private:
 	// store all bitboards in an array - 2 for each colors and the other for pieces
@@ -104,8 +117,6 @@ private:
 
 	short from, to; // orign and destination
 	bool color; // keeps track of whose turn it is
-	bool inCheck;
-	bool didWin; // store win condition
 
 	void pawnPromotion(short pieceType, std::bitset<64> toBitBoard);
 	short getPieceType();
@@ -132,5 +143,5 @@ private:
 	// fifty move stalemate applies if there is no capture
 	// or pawn movement over fifty moves
 	void fiftyMoveRule();
-	//---------------end of fifty move rule------------------------//
+	//-----------------end of fifty move rule----------------------//
 };
