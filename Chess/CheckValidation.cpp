@@ -226,7 +226,7 @@ void ChessBoard::isInCheck() {
 
 	if ((enemyKing & attackBB[color]) != 0x0) {
 		inCheck = true;
-		std::cout << "Check!" << std::endl;
+		std::cout << std::setw(21) << "Check!" << std::endl;
 	}
 }
 
@@ -296,11 +296,17 @@ void ChessBoard::isCheckMate() {
 		}
 	}
 
+	
+
 	// if there are any threats left, check to see if can block attack with own piece
 	// pawn or knight can't be blocked
 	if (threatPiece.any()) {
 		for (int i = 0; i < 64; i++) {
 			if (threatPiece[i]) {
+
+				short leftMaxRange = i - i % 8;
+				short rightMaxRange = 7 + leftMaxRange;
+
 				auto pieceType = getPieceType(i);
 				if (pieceType == knight || pieceType == pawn)
 					blocked = true;
@@ -309,15 +315,18 @@ void ChessBoard::isCheckMate() {
 
 				// this will be vertical attacks
 				if (distance % 8 == 0) {
-					possibleBlock(8, distance, blocked);
+					possibleBlock(8, distance, blocked, i);
 				}
-
 				// this will be the diagonal attacks
 				else if (distance % 7 == 0) {
-					possibleBlock(7, distance, blocked);
+					possibleBlock(7, distance, blocked, i);
 				}
 				else if (distance % 9 == 0) {
-					possibleBlock(9, distance, blocked);
+					possibleBlock(9, distance, blocked, i);
+				}
+				// this will be horizontal attacks
+				else if (position - i + i >= leftMaxRange && position - i + i <= rightMaxRange) {
+					possibleBlock(1, distance, blocked, i);
 				}
 				
 			}
@@ -325,25 +334,42 @@ void ChessBoard::isCheckMate() {
 	}
 
 	// if all escapes fail, the game ends
-	if (possibleMovements.any() && !attackMove && threatPiece.any() && !blocked) {
-		std::cout << "Checkmate!" << std::endl;
-		std::cout << (color ? "White" : "Black") << " is the winner" << std::endl;
+	if (possibleMovements.none() && !attackMove && threatPiece.any() && !blocked) {
+		std::cout << std::setw(22) << "Checkmate!" << std::endl;
+		std::cout << std::setw(13) << (color ? "White" : "Black") << " is the winner" << std::endl;
 		didWin = true;
 		system("pause");
 	}
 }
 
 // checks if it is possible to block an attack with another piece
-void ChessBoard::possibleBlock(short modifier, short distance, bool & blocked) {
+void ChessBoard::possibleBlock(short modifier, short distance, bool & blocked, short threatPos) {
 	bool positive = distance > 0;
 	// i need to make sure I don't include the two pieces
 	distance += positive ? -1 * modifier : modifier;
+
+	auto allColorPieces = getPieces(color);
 
 	// this means the piece is next to the king and is protected
 	if (distance == 0)
 		blocked = true;
 	else {
-		
+		for (int i = 0; i < 64; i++) {
+			int temp = distance;
+			if (allColorPieces[i]) {
+				auto piece = getPieceType(i);
+				while (distance != 0) {
+					// i'm doing this so i don't need to overload my validateMove function
+					updateMove(i, threatPos + distance);
+
+					if (validateMove(piece)) {
+						possibleMovements[threatPos + distance] = true;
+					}
+					distance += positive ? -1 * modifier : modifier;
+				}
+			}
+			distance = temp;
+		}
 	}
 }
 //----------------------------------------end of check validation------------------------------------------------------//

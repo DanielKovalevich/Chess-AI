@@ -108,7 +108,7 @@ public:
 	std::bitset<64> threatPiece;
 
 	void isInCheck();
-	void possibleBlock(short modifier, short distance, bool & blocked);
+	void possibleBlock(short modifier, short distance, bool & blocked, short threatPos);
 	//-----------------end of check validation---------------------//
 
 private:

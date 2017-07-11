@@ -64,8 +64,8 @@ void ChessBoard::drawBoard() {
 
 	createPostBoard();
 
-	// for testing purposes
-	// TODO delete when done
+	// for testing attack bitboards
+	/*
 	for (int i = 56; i >= 0; i -= 8) {
 		for (int j = i; j - i < 8; j++) {
 			std::cout << attackBB[white][j];;
@@ -73,6 +73,7 @@ void ChessBoard::drawBoard() {
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
+	*/
 }
 
 void ChessBoard::createPreBoard() {

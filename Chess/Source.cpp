@@ -22,7 +22,7 @@ int main() {
 
 		// don't want input on a checkmate
 		if (!CB.won()) {
-			std::cout << "Piece to move and destination: ";
+			std::cout << " Piece to move and destination: ";
 			std::cin >> origFile >> origRank >> destFile >> destRank;
 			origFile = toupper(origFile);
 			destFile = toupper(destFile);
@@ -49,9 +49,11 @@ int main() {
 			}
 			else {
 				std::cout << "Improper input!" << std::endl;
+				std::cin.clear();
 				system("pause");
 			}
 			system("cls");
+			std::cin.clear();
 		}
 	}
 

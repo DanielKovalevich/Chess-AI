@@ -222,7 +222,6 @@ bool ChessBoard::validateMove(short piece) {
 			return positive ? noBlockingPieces(east) : noBlockingPieces(west);
 		}
 
-		std::cout << "The queen can't move that way!" << std::endl;
 		return false;
 	}
 
@@ -232,7 +231,6 @@ bool ChessBoard::validateMove(short piece) {
 		if (to - from + from >= leftMaxRange && to - from + from <= rightMaxRange)
 			return positive ? noBlockingPieces(east) : noBlockingPieces(west);
 		
-		std::cout << "The rook can't move that way!" << std::endl;
 		return false;
 	}
 
@@ -242,7 +240,6 @@ bool ChessBoard::validateMove(short piece) {
 		if (distance % northEast == 0)
 			return positive ? noBlockingPieces(northEast) : noBlockingPieces(southWest);
 		
-		std::cout << "The bishop can't move that way!" << std::endl;
 		return false;
 	}
 
