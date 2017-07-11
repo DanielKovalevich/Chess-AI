@@ -18,7 +18,13 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ChessBoard.cpp">
+    <ClCompile Include="CheckValidation.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BoardCreation.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Move.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

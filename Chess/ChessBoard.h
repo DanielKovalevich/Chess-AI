@@ -1,5 +1,7 @@
 #pragma once
 #include <bitset>
+#include <iostream>
+#include <iomanip>
 
 class ChessBoard {
 public:
@@ -99,13 +101,14 @@ public:
 	//--------------------check validation-------------------------//
 	bool inCheck;
 	bool didWin; // store win condition
-				 // stores the possible moves to avoid checkmate
-				 // makes for checking check-avoiding-moves easier
+	// stores the possible moves to avoid checkmate
+	// makes for checking check-avoiding-moves easier
 	std::bitset<64> possibleMovements;
 	// stores the position of the attacking pieces
 	std::bitset<64> threatPiece;
 
 	void isInCheck();
+	void possibleBlock(short modifier, short distance, bool & blocked);
 	//-----------------end of check validation---------------------//
 
 private:
@@ -144,4 +147,13 @@ private:
 	// or pawn movement over fifty moves
 	void fiftyMoveRule();
 	//-----------------end of fifty move rule----------------------//
+
+	//-----------------generation of attacks----------------------//
+	void generatePawnAttacks(short, bool);
+	void generateKnightAttacks(short, bool);
+	void generateBishopAttacks(short, bool);
+	void generateRookAttacks(short, bool);
+	void generateQueenAttacks(short, bool);
+	void generateKingAttacks(short, bool);
+	//--------------end of generation of attacks----------------------//
 };
